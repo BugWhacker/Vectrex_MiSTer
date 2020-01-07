@@ -164,7 +164,12 @@ port
 	lf_2         : in  std_logic;
 	rt_2         : in  std_logic;
 	pot_x_2      : in  signed(7 downto 0);
-	pot_y_2      : in  signed(7 downto 0)
+	pot_y_2      : in  signed(7 downto 0);
+	
+	beam_h_out   : out unsigned(9 downto 0);
+	beam_v_out   : out unsigned(9 downto 0);
+	
+	beam_blank_n_out : out std_logic
 );
 end vectrex;
 
@@ -365,6 +370,7 @@ begin
 -- (port A, port B, CA2 and CB2 are declared to be delayed. Unsued delayed signals/buffers
 -- will be removed automaticaly by compiler so no ressources will be wasted)
 
+
 process (clock)
 begin
 	if rising_edge(clock) then
@@ -379,6 +385,10 @@ begin
 			via_ca2_o_d <= delay_buffer(94)(16);
 			via_cb2_o_d <= delay_buffer(94)(17);
 		end if;
+		
+		beam_h_out <= beam_h;
+		beam_v_out <= beam_v;
+		beam_blank_n_out <= beam_blank_n;
 	end if;
 end process;
 

@@ -1047,7 +1047,7 @@ alsa alsa
 
 
 ////////////////  User I/O (USB 3.0 connector) /////////////////////////
-
+/*
 assign USER_IO[0] =                       !user_out[0]  ? 1'b0 : 1'bZ;
 assign USER_IO[1] =                       !user_out[1]  ? 1'b0 : 1'bZ;
 assign USER_IO[2] = !(SW[1] ? HDMI_I2S   : user_out[2]) ? 1'b0 : 1'bZ;
@@ -1063,7 +1063,7 @@ assign user_in[3] =         USER_IO[3];
 assign user_in[4] = SW[1] | USER_IO[4];
 assign user_in[5] = SW[1] | USER_IO[5];
 assign user_in[6] =         USER_IO[6];
-
+*/
 
 ///////////////////  User module connection ////////////////////////////
 
@@ -1192,6 +1192,8 @@ emu emu
 
 	.USER_OUT(user_out),
 	.USER_IN(user_in),
+	
+	.USER_IO(USER_IO),		// Temporary, for the vector DAC board. ElectronAsh.
 
 	.OSD_STATUS(osd_status)
 );

@@ -119,12 +119,14 @@ module emu
 	// Set USER_OUT to 1 to read from USER_IN.
 	input   [6:0] USER_IN,
 	output  [6:0] USER_OUT,
+	
+	inout   [6:0] USER_IO,
 
 	input         OSD_STATUS
 );
 
 assign ADC_BUS  = 'Z;
-assign USER_OUT = '1;
+//assign USER_OUT = '1;
 assign {UART_RTS, UART_TXD, UART_DTR} = 0;
 assign {SD_SCK, SD_MOSI, SD_CS} = 'Z;
 assign {SDRAM_DQ, SDRAM_A, SDRAM_BA, SDRAM_CLK, SDRAM_CKE, SDRAM_DQML, SDRAM_DQMH, SDRAM_nWE, SDRAM_nCAS, SDRAM_nRAS, SDRAM_nCS} = 'Z;
@@ -299,7 +301,68 @@ vectrex vectrex
 	.lf_2(joystick_1[6]),
 	.rt_2(joystick_1[7]),
 	.pot_x_2(joya_1[7:0]  ? joya_1[7:0]   : {joystick_1[1], {7{joystick_1[0]}}}),
-	.pot_y_2(joya_1[15:8] ? ~joya_1[15:8] : {joystick_1[2], {7{joystick_1[3]}}})
+	.pot_y_2(joya_1[15:8] ? ~joya_1[15:8] : {joystick_1[2], {7{joystick_1[3]}}}),
+	
+	.beam_h_out( beam_h_out ),
+	.beam_v_out( beam_v_out ),
+	
+	.beam_blank_n_out( beam_blank_n )
 );
+
+wire beam_blank_n;
+
+wire [9:0] beam_h_out;
+wire [9:0] beam_v_out;
+
+//wire signed [9:0] beam_h_signed = $signed(beam_h) - 512;
+//wire signed [9:0] beam_v_signed = $signed(beam_v) - 512;
+
+wire [9:0] beam_h_div = (beam_h_out/2)+384;
+wire [9:0] beam_v_div = (beam_v_out/2)+384;
+
+
+spi_mcp spi_mcp_inst
+(
+	.clock( clk_sys ) ,						// input  clock
+	.reset_n( !reset ) ,						// input  reset_n
+	
+	.dac_x( {~beam_v_div, 2'b00} ) ,		// input [11:0] dac_x  Note: Vectrex X/Y are swapped during DAC testing! (vs the Black Widow core).
+	.dac_y( {beam_h_div, 2'b00} ) ,		// input [11:0] dac_y
+	
+	.dac_r( {12{beam_blank_n}} ) ,		// input [11:0] dac_r
+	.dac_g( {12{beam_blank_n}} ) ,		// input [11:0] dac_g
+	.dac_b( {12{beam_blank_n}} ) ,		// input [11:0] dac_b
+
+	.dac_i( {12{beam_blank_n}} ) ,		// input [11:0] dac_i
+	
+	.dac_x_latch( 1'b1 ),					// input  dac_x_latch
+	.dac_y_latch( 1'b1 ),					// input  dac_y_latch
+	.dac_r_latch( 1'b1 ),					// input  dac_r_latch
+	.dac_g_latch( 1'b1 ),					// input  dac_g_latch
+	.dac_b_latch( 1'b1 ),					// input  dac_b_latch
+	.dac_i_latch( 1'b1 ),					// input  dac_i_latch
+	
+	.dac_sclk( dac_sclk ) ,					// output  dac_sclk
+	.dac_cs_n( dac_cs_n ) ,					// output  dac_cs_n
+	.dac_lat_n( dac_lat_n ) ,				// output  dac_lat_n
+	
+	.dac_sdat_xy( dac_sdat_xy ) ,			// output  dac_sdat_xy
+	.dac_sdat_rg( dac_sdat_rg ) ,			// output  dac_sdat_rg
+	.dac_sdat_bi( dac_sdat_bi ) ,			// output  dac_sdat_bi
+);
+
+// 0 - D+/RX
+// 1 - D-/TX
+// 2..5 - USR1..USR4
+assign USER_IO[0] = dac_sclk;
+assign USER_IO[1] = dac_sdat_xy;
+
+assign USER_IO[2] = dac_cs_n;
+//assign USER_IO[3] = dac_sdat_rg;
+//assign USER_IO[4] = dac_sdat_bi;
+assign USER_IO[5] = dac_lat_n;
+
+
+assign USER_IO[3] = beam_blank_n;
 
 endmodule
