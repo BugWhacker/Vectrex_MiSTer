@@ -306,34 +306,53 @@ vectrex vectrex
 	.beam_h_out( beam_h_out ),
 	.beam_v_out( beam_v_out ),
 	
-	.beam_blank_n_out( beam_blank_n )
+	.beam_blank_n_out( beam_blank_n ),
+	
+	.beam_blank_n_delayed_out( beam_blank_n_delayed )
 );
 
 wire beam_blank_n;
+wire beam_blank_n_delayed;
 
 wire [9:0] beam_h_out;
 wire [9:0] beam_v_out;
 
-//wire signed [9:0] beam_h_signed = $signed(beam_h) - 512;
-//wire signed [9:0] beam_v_signed = $signed(beam_v) - 512;
+// Note, from rattboi...
+//
+// 1) convert original x to signed x (extra MSB bit needed for the sign!).
+// 2) subtract out 270 to "rezero" it in signed.
+// 3) scale as necessary (the value should be from -270 to +270), so maybe 4x it?
+// 4) add the offset for the unsigned DAC "zero" point (2047).
+// 5) convert back to unsigned for the DAC.
+//
+(*keep*) wire signed [10:0] beam_h_signed = beam_h_out;
+(*keep*) wire signed [10:0] beam_v_signed = beam_v_out;
 
-wire [9:0] beam_h_div = (beam_h_out/2)+384;
-wire [9:0] beam_v_div = (beam_v_out/2)+384;
+(*keep*) wire signed [11:0] beam_h_offset = beam_h_signed - 10'sd270;
+(*keep*) wire signed [11:0] beam_v_offset = beam_v_signed - 10'sd360;
 
+(*keep*) wire signed [11:0] beam_h_scaled = (beam_h_offset * 3'sd2);
+(*keep*) wire signed [11:0] beam_v_scaled = (beam_v_offset * 3'sd2);
+
+(*keep*) wire [11:0] beam_h_done = $unsigned(beam_h_scaled) + 12'sd2047;
+(*keep*) wire [11:0] beam_v_done = $unsigned(beam_v_scaled) + 12'sd2047;
 
 spi_mcp spi_mcp_inst
 (
 	.clock( clk_sys ) ,						// input  clock
 	.reset_n( !reset ) ,						// input  reset_n
 	
-	.dac_x( {~beam_v_div, 2'b00} ) ,		// input [11:0] dac_x  Note: Vectrex X/Y are swapped during DAC testing! (vs the Black Widow core).
-	.dac_y( {beam_h_div, 2'b00} ) ,		// input [11:0] dac_y
+	.invert_x( 1'b1 ) ,						// input  invert_x
+	.invert_y( 1'b0 ) ,						// input  invert_y
 	
-	.dac_r( {12{beam_blank_n}} ) ,		// input [11:0] dac_r
-	.dac_g( {12{beam_blank_n}} ) ,		// input [11:0] dac_g
-	.dac_b( {12{beam_blank_n}} ) ,		// input [11:0] dac_b
+	.dac_x( beam_h_done ) ,					// input [11:0] dac_x. (UNSIGNED! Lowest at 0. Mid-point at 2047. Highest at 4095).
+	.dac_y( beam_v_done ) ,					// input [11:0] dac_y. (UNSIGNED! Lowest at 0. Mid-point at 2047. Highest at 4095).
+	
+	.dac_r( {12{beam_blank_n_delayed}} ) ,	// input [11:0] dac_r
+	.dac_g( {12{beam_blank_n_delayed}} ) ,	// input [11:0] dac_g
+	.dac_b( {12{beam_blank_n_delayed}} ) ,	// input [11:0] dac_b
 
-	.dac_i( {12{beam_blank_n}} ) ,		// input [11:0] dac_i
+	.dac_i( {12{beam_blank_n_delayed}} ) ,	// input [11:0] dac_i
 	
 	.dac_x_latch( 1'b1 ),					// input  dac_x_latch
 	.dac_y_latch( 1'b1 ),					// input  dac_y_latch
@@ -349,6 +368,9 @@ spi_mcp spi_mcp_inst
 	.dac_sdat_xy( dac_sdat_xy ) ,			// output  dac_sdat_xy
 	.dac_sdat_rg( dac_sdat_rg ) ,			// output  dac_sdat_rg
 	.dac_sdat_bi( dac_sdat_bi ) ,			// output  dac_sdat_bi
+	
+	.blank_in( beam_blank_n_delayed ) ,
+	.blank_out( blank_out_n )
 );
 
 // 0 - D+/RX
@@ -363,6 +385,7 @@ assign USER_IO[2] = dac_cs_n;
 assign USER_IO[5] = dac_lat_n;
 
 
-assign USER_IO[3] = beam_blank_n;
+assign USER_IO[3] = beam_blank_n_delayed;	// Use the blanking direct from the core.
+//assign USER_IO[3] = blank_out_n;	// Use the blanking synchronized with dac_lat_n.
 
 endmodule

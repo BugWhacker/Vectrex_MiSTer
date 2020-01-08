@@ -29,6 +29,9 @@ module spi_mcp (
 	input clock,
 	input reset_n,
 	
+	input invert_x,
+	input invert_y,
+	
 	input [11:0] dac_x,
 	input [11:0] dac_y,
 	input [11:0] dac_r,
@@ -49,7 +52,10 @@ module spi_mcp (
 	
 	output dac_sdat_xy,
 	output dac_sdat_rg,
-	output dac_sdat_bi
+	output dac_sdat_bi,
+	
+	input blank_in,
+	output reg blank_out
 );
 
 /*
@@ -61,6 +67,7 @@ assign dac_sclk = !sclk;	// Inverted the clock for the output to the DACs!
 
 assign dac_sclk = !clock;	// Inverted the clock for the output to the DACs!
 
+reg input_reg_blank;
 
 reg [11:0] input_reg_x;
 reg [11:0] input_reg_y;
@@ -85,8 +92,10 @@ end
 else begin
 	bit_cnt <= bit_cnt + 1;
 
-	if (dac_x_latch) input_reg_x <= dac_x;
-	if (dac_y_latch) input_reg_y <= dac_y;
+	input_reg_blank <= blank_in;
+	
+	if (dac_x_latch) input_reg_x <= (invert_x) ? ~dac_x : dac_x;
+	if (dac_y_latch) input_reg_y <= (invert_y) ? ~dac_y : dac_y;
 	if (dac_r_latch) input_reg_r <= dac_r;
 	if (dac_g_latch) input_reg_g <= dac_g;
 	if (dac_b_latch) input_reg_b <= dac_b;
@@ -116,6 +125,8 @@ else begin
 	dac_lat_n <= !(bit_cnt>=34 && bit_cnt<=35);
 	
 	if (bit_cnt==36) bit_cnt <= 6'd0;
+	
+	if (bit_cnt==34) blank_out <= input_reg_blank;
 end
 
 assign dac_sdat_xy = shift_reg_xy[15];

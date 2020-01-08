@@ -53,10 +53,10 @@
 -- Vectrex beam control hardware
 --   Uses via port_A, dac and capacitor to set beam x/y displacement speed
 --   when done beam displacement is released (port_B_7 = 0)
---   beam displacement duration is controled by Timer 1 (that drive port_B_7)
+--   beam displacement duration is controlled by Timer 1 (that drive port_B_7)
 --   or by 6809 instructions execution duration.
 --
---   Uses via port_A, dac and capacitor to set beam intensity before displacment
+--   Uses via port_A, dac and capacitor to set beam intensity before displacement
 
 --   Before drawing any object (or text) the beam position is reset to screen center.
 --   via_CA2 is used to reset beam position.
@@ -169,7 +169,9 @@ port
 	beam_h_out   : out unsigned(9 downto 0);
 	beam_v_out   : out unsigned(9 downto 0);
 	
-	beam_blank_n_out : out std_logic
+	beam_blank_n_out : out std_logic;
+	
+	beam_blank_n_delayed_out : out std_logic
 );
 end vectrex;
 
@@ -389,6 +391,8 @@ begin
 		beam_h_out <= beam_h;
 		beam_v_out <= beam_v;
 		beam_blank_n_out <= beam_blank_n;
+		
+		beam_blank_n_delayed_out <= beam_blank_n_delayed;
 	end if;
 end process;
 
